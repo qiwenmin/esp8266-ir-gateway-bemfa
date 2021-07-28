@@ -25,7 +25,7 @@ void setup() {
 #endif // DEV_BOARD
 
     // Init bemfaMqtt
-    register_panasonic_light_01_handler(bemfaMqtt, hostname);
+    register_panasonic_light_01_handler(bemfaMqtt, hostname, boot.getLed());
 
     bemfaMqtt.begin();
 

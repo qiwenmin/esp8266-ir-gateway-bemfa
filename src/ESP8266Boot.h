@@ -6,6 +6,7 @@
 #include <ArduinoOTA.h>
 
 #include "DebugPrint.h"
+#include "devices.h"
 
 class ESP8266Boot : public DebugPrint {
 public:
@@ -22,7 +23,8 @@ public:
         _led_pin(PIN_NONE), _led_on_val(HIGH),
         _btn_pin(PIN_NONE), _btn_down_val(LOW), _btn_pin_mode(INPUT_PULLUP),
         _hostname(""), _ota_password(""),
-        _state(INIT) {
+        _state(INIT), _led(this) {
+
     };
 
     void setLed(uint8_t pin, uint8_t on_val = HIGH) {
@@ -59,6 +61,9 @@ public:
         return _state;
     };
 
+    Led *getLed() {
+        return &_led;
+    };
 private:
     uint8_t _led_pin;
     uint8_t _led_on_val;
@@ -70,6 +75,37 @@ private:
     String _hostname;
     String _ota_password;
 
+    State _state;
+
+    class BootLed : public Led {
+    public:
+        BootLed(ESP8266Boot *boot) : _boot(boot), _pattern(0) {
+        };
+
+        virtual void on() override {
+            _pattern = 0xFFFFFFFF;
+            if (_boot->getState() == READY) {
+                _boot->_update_led_pattern(_pattern);
+            }
+        };
+
+        virtual void off() override {
+            _pattern = 0x00000000;
+            if (_boot->getState() == READY) {
+                _boot->_update_led_pattern(_pattern);
+            }
+        };
+
+        uint32_t getPattern() {
+            return _pattern;
+        }
+
+    private:
+        ESP8266Boot *_boot;
+        uint32_t _pattern;
+    };
+
+    BootLed _led;
 private:
     void setupPins() {
         if (_led_pin != PIN_NONE) {
@@ -152,31 +188,26 @@ private:
     };
 
     void _led_connecting() {
-        _led_start();
         _update_led_pattern(0xFF00FF00); // slow flashing
     };
 
     void _led_smartconfig() {
-        _led_start();
         _update_led_pattern(0x05050505); // double flashing
     };
 
     void _led_reboot() {
-        _led_start();
         _update_led_pattern(0xFFFF0000); // very slow flashing
     };
 
     void _led_start() {
         if (!_led_ticker.active()) {
-            _update_led_pattern(0x00); // Off
+            _update_led_pattern(_led.getPattern());
             _led_ticker.attach_ms(100, _led_ticker_callback, this);
         }
     };
 
     void _led_stop() {
-        _led_ticker.detach();
-        _update_led_pattern(0x00); // Off
-        _led_ticker_callback(this);
+        _update_led_pattern(_led.getPattern());
     };
 
     static void _led_ticker_callback(ESP8266Boot *self) {
@@ -251,8 +282,6 @@ private:
 
     unsigned long _btn_hold_since;
     Ticker _btn_ticker;
-
-    State _state;
 
     WiFiEventHandler _wifi_connected_handler;
     WiFiEventHandler _wifi_disconnected_handler;

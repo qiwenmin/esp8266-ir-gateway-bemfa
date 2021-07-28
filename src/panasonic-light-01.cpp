@@ -2,7 +2,6 @@
 #include <IRsend.h>
 #include <Ticker.h>
 
-#include "hw.h"
 #include "panasonic-light-01.h"
 
 #define IR_SWITCH_PIN (14)
@@ -14,6 +13,7 @@ static String lastMsg;
 static bool wsState = false;
 
 Ticker irSendTicker;
+static Led *led = 0;
 
 static const uint16_t rawDataLen = 83;
 static const uint16_t rawDataOff[rawDataLen] = {
@@ -43,14 +43,19 @@ static const uint16_t rawDataOn[rawDataLen] = {
 static const uint16_t sendRawInHz = 38000;
 
 static bool switch_light(bool isOn) {
-    // update led every time
-    digitalWrite(LED_PIN, isOn ? LOW : HIGH);
-
     if (wsState == isOn) {
         return false;
     }
 
     wsState = isOn;
+
+    if (led) {
+        if (isOn) {
+            led->on();
+        } else {
+            led->off();
+        }
+    }
 
     // Send 2 times
     irsend.sendRaw(wsState ? rawDataOn : rawDataOff, rawDataLen, sendRawInHz);
@@ -63,7 +68,9 @@ static bool switch_light(bool isOn) {
     return true;
 }
 
-void register_panasonic_light_01_handler(BemfaMqtt &bemfaMqtt, const String& topicPrefix) {
+void register_panasonic_light_01_handler(BemfaMqtt &bemfaMqtt, const String& topicPrefix, Led *theLed) {
+    led = theLed;
+
     // init hardware
     irsend.begin();
 
