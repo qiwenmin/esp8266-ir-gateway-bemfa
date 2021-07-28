@@ -3,8 +3,43 @@
 #include <ESPAsyncWebServer.h>
 #include <FS.h>
 #include <LittleFS.h>
+#include <AsyncJson.h>
+#include <ArduinoJson.h>
 
-class Httpd {
+#include "DebugPrint.h"
+
+#include "version.h"
+
+static const char *mimetype(const String &filename) {
+    auto fn = filename;
+    fn.toLowerCase();
+
+    if (fn.endsWith(".htm") || fn.endsWith(".html")) {
+        return "text/html";
+    }
+    if (fn.endsWith(".css")) {
+        return "text/css";
+    }
+    if (fn.endsWith(".js")) {
+        return "application/javascript";
+    }
+    if (fn.endsWith(".json")) {
+        return "application/json";
+    }
+    if (fn.endsWith(".png")) {
+        return "image/png";
+    }
+    if (fn.endsWith(".jpg") || fn.endsWith(".jpeg")) {
+        return "image/jpeg";
+    }
+    if (fn.endsWith(".gif")) {
+        return "image/gif";
+    }
+
+    return "text/plain";
+}
+
+class Httpd : public DebugPrint {
 public:
     Httpd(uint16_t port)
         : _server(port) {
@@ -15,10 +50,54 @@ public:
         LittleFS.begin();
 
         // Init web server
-        _server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-            request->send(LittleFS, "/site/index.html", "text/html", false);
+
+        // route - /version
+        _server.on("/version", HTTP_GET, [](AsyncWebServerRequest *request) {
+            auto response = request->beginResponseStream("application/json");
+            DynamicJsonDocument v(256);
+
+            v["firmware"] = FIRMWARE_VERSION;
+            v["sdk"] = ESP.getSdkVersion();
+            v["boot"] = ESP.getBootVersion();
+            v["core"] = ESP.getCoreVersion();
+            v["full"] = ESP.getFullVersion();
+
+            serializeJsonPretty(v, *response);
+            request->send(response);
         });
 
+        // route - `/api/xxxxxx`
+        auto handler = new AsyncCallbackJsonWebHandler("/api", [this](AsyncWebServerRequest *request, JsonVariant &json) {
+            auto path = request->url();
+            debugPrint()->print("[HTTPD] Json request: "); debugPrint()->println(path);
+            debugPrint()->print("          method: "); debugPrint()->println(request->methodToString());
+
+            auto jsonObj = json.as<JsonObject>();
+            debugPrint()->println("            keys: ");
+            for (auto it = jsonObj.begin(); it != jsonObj.end(); ++it) {
+                debugPrint()->print("                  "); debugPrint()->println(it->key().c_str());
+            }
+
+            // TODO implement apis
+
+            request->send(200);
+        });
+        handler->setMethod(HTTP_POST | HTTP_PUT);
+        handler->setMaxContentLength(1024);
+        _server.addHandler(handler);
+
+        // route - static contents
+        _server.on("^\\/(.*)$", HTTP_GET, [this](AsyncWebServerRequest *request) {
+            auto path = request->pathArg(0);
+            if (path == "") {
+                path = "index.html";
+            }
+
+            debugPrint()->print("[HTTP] static: "); debugPrint()->println(path);
+            request->send(LittleFS, "/site/" + path, mimetype(path), false);
+        });
+
+        // route - not found
         _server.onNotFound([](AsyncWebServerRequest *request) {
             request->send(404, "text/plain", "Not found");
         });

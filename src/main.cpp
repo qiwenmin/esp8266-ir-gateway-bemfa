@@ -24,6 +24,7 @@ void setup() {
 
 #ifdef DEV_BOARD
     bemfaMqtt.setDebugPrint(&Serial);
+    httpd.setDebugPrint(&Serial);
     boot.setDebugPrint(&Serial);
 #endif // DEV_BOARD
 
