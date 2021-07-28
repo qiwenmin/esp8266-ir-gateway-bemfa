@@ -110,12 +110,17 @@ public:
             }
 
             DEBUG_LOG("[HTTP] static: "); DEBUG_LOG_LN(path);
-            request->send(LittleFS, "/site/" + path, mimetype(path), false);
+            auto fpath = "/site/" + path;
+            if (LittleFS.exists(fpath)) {
+                request->send(LittleFS, fpath, mimetype(path), false);
+            } else {
+                request->send(404, "text/plain", "Not Found");
+            }
         });
 
         // route - not found
         _server.onNotFound([](AsyncWebServerRequest *request) {
-            request->send(404, "text/plain", "Not found");
+            request->send(404, "text/plain", "Not Found");
         });
 
         _server.begin();
