@@ -1,5 +1,7 @@
 #include <Arduino.h>
 
+#include "DebugLog.h"
+
 #include "ESP8266Boot.h"
 #include "bemfa.h"
 #include "httpd.h"
@@ -8,6 +10,10 @@
 #include "bemfa.inc"
 
 #include "panasonic-light-01.h"
+
+#ifdef ENABLE_DEBUG_LOG
+Print *DebugLogger = &Serial;
+#endif
 
 ESP8266Boot boot;
 
@@ -21,12 +27,6 @@ void setup() {
     Serial.begin(115200, SERIAL_8N1, SERIAL_TX_ONLY);
 
     hostname = "XE" + String(ESP.getChipId(), DEC);
-
-#ifdef DEV_BOARD
-    bemfaMqtt.setDebugPrint(&Serial);
-    httpd.setDebugPrint(&Serial);
-    boot.setDebugPrint(&Serial);
-#endif // DEV_BOARD
 
     // Init bemfaMqtt
     register_panasonic_light_01_handler(bemfaMqtt, hostname, boot.getLed());
@@ -48,15 +48,15 @@ void loop() {
     boot.loop();
     bemfaMqtt.loop();
 
-#ifdef DEV_BOARD
+#ifdef ENABLE_DEBUG_LOG
     static auto last_loop_at = millis();
 
     auto now = millis();
     auto duration = now - last_loop_at;
     if (duration >= 100) {
-        Serial.print("WARN: loop duration ");
-        Serial.println(duration);
+        DEBUG_LOG("WARN: loop duration ");
+        DEBUG_LOG_LN(duration);
     }
     last_loop_at = now;
-#endif // DEV_BOARD
+#endif // ENABLE_DEBUG_LOG
 }

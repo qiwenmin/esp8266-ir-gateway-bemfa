@@ -5,10 +5,10 @@
 #include <ESP8266WiFi.h>
 #include <ArduinoOTA.h>
 
-#include "DebugPrint.h"
+#include "DebugLog.h"
 #include "devices.h"
 
-class ESP8266Boot : public DebugPrint {
+class ESP8266Boot {
 public:
     static const uint8_t PIN_NONE = 255;
 
@@ -130,7 +130,7 @@ private:
     }
 
     void setupWiFi() {
-        debugPrint()->println();
+        DEBUG_LOG_LN();
 
         WiFi.mode(WIFI_STA);
 
@@ -138,32 +138,32 @@ private:
             WiFi.setHostname(_hostname.c_str());
         }
 
-        debugPrint()->print("[BOOT] Connecting to WiFi [");
-        debugPrint()->print(WiFi.macAddress());
-        debugPrint()->println("]...");
+        DEBUG_LOG("[BOOT] Connecting to WiFi [");
+        DEBUG_LOG(WiFi.macAddress());
+        DEBUG_LOG_LN("]...");
 
         _wifi_connected_handler = WiFi.onStationModeGotIP([this](const WiFiEventStationModeGotIP &) {
-            debugPrint()->println("[BOOT] State -> READY");
+            DEBUG_LOG_LN("[BOOT] State -> READY");
 
             _state = READY;
 
             _led_stop();
 
-            debugPrint()->println("[BOOT] WiFi connected.");
-            debugPrint()->print("[BOOT]  SSID: ");
-            debugPrint()->println(WiFi.SSID());
-            debugPrint()->print("[BOOT]  Hostname: ");
-            debugPrint()->println(WiFi.hostname());
-            debugPrint()->print("[BOOT]  IP address: ");
-            debugPrint()->println(WiFi.localIP());
+            DEBUG_LOG_LN("[BOOT] WiFi connected.");
+            DEBUG_LOG("[BOOT]  SSID: ");
+            DEBUG_LOG_LN(WiFi.SSID());
+            DEBUG_LOG("[BOOT]  Hostname: ");
+            DEBUG_LOG_LN(WiFi.hostname());
+            DEBUG_LOG("[BOOT]  IP address: ");
+            DEBUG_LOG_LN(WiFi.localIP());
         });
 
         _wifi_disconnected_handler = WiFi.onStationModeDisconnected([this](const WiFiEventStationModeDisconnected &) {
-            debugPrint()->println("[BOOT] WiFi disconnected.");
+            DEBUG_LOG_LN("[BOOT] WiFi disconnected.");
 
             if (_state != READY) return;
 
-            debugPrint()->println("[BOOT] State -> WIFI_CONNECTING");
+            DEBUG_LOG_LN("[BOOT] State -> WIFI_CONNECTING");
             _state = WIFI_CONNECTING;
 
             _led_connecting();
@@ -182,9 +182,9 @@ private:
         }
 
         ArduinoOTA.begin();
-        debugPrint()->println("[BOOT] Arduino OTA begin...");
-        debugPrint()->print("[BOOT]  Hostname: ");
-        debugPrint()->println(ArduinoOTA.getHostname());
+        DEBUG_LOG_LN("[BOOT] Arduino OTA begin...");
+        DEBUG_LOG("[BOOT]  Hostname: ");
+        DEBUG_LOG_LN(ArduinoOTA.getHostname());
     };
 
     void _led_connecting() {
@@ -226,7 +226,7 @@ private:
             if (duration > 10000) { // Reset
                 self->_led_reboot();
                 if (val != self->_btn_down_val) {
-                    self->debugPrint()->println("[BOOT] Reset...");
+                    DEBUG_LOG_LN("[BOOT] Reset...");
                     ESP.restart();
                 }
             } else if (duration > 5000) { // smart config
@@ -245,7 +245,7 @@ private:
     void _btn_loop() {
         if (_btn_pin != PIN_NONE) {
             if (_state == SMART_CONFIG) {
-                debugPrint()->println("[BOOT] Starting SmartConfig...");
+                DEBUG_LOG_LN("[BOOT] Starting SmartConfig...");
 
                 WiFi.stopSmartConfig();
 
@@ -253,8 +253,8 @@ private:
                 WiFi.beginSmartConfig();
                 while (1) {
                     if (WiFi.smartConfigDone()) {
-                        debugPrint()->println("[BOOT] Done");
-                        debugPrint()->printf("SSID: %s\n", WiFi.SSID().c_str());
+                        DEBUG_LOG_LN("[BOOT] Done");
+                        DEBUG_LOG   ("  SSID:"); DEBUG_LOG_LN(WiFi.SSID());
 
                         WiFi.setAutoConnect(true);
 

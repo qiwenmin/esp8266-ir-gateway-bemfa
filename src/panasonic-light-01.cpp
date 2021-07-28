@@ -2,6 +2,7 @@
 #include <IRsend.h>
 #include <Ticker.h>
 
+#include "DebugLog.h"
 #include "panasonic-light-01.h"
 
 #define IR_SWITCH_PIN (14)
@@ -82,13 +83,11 @@ void register_panasonic_light_01_handler(BemfaMqtt &bemfaMqtt, const String& top
     topic.toLowerCase();
 
     bemfaMqtt.onMessage(topic, [](const String &topic, const String &msg, AsyncMqttClient &mqttClient) {
-#ifdef DEV_BOARD
-        Serial.print("OnMessage: <");
-        Serial.print(topic);
-        Serial.print(">: ");
-        Serial.print(msg);
-        Serial.println();
-#endif // DEV_BOARD
+        DEBUG_LOG("[LIGHT-01] OnMessage: <");
+        DEBUG_LOG(topic);
+        DEBUG_LOG(">: ");
+        DEBUG_LOG(msg);
+        DEBUG_LOG_LN();
 
         bool changed = false;
 

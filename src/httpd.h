@@ -6,7 +6,7 @@
 #include <AsyncJson.h>
 #include <ArduinoJson.h>
 
-#include "DebugPrint.h"
+#include "DebugLog.h"
 
 #include "version.h"
 
@@ -39,7 +39,7 @@ static const char *mimetype(const String &filename) {
     return "text/plain";
 }
 
-class Httpd : public DebugPrint {
+class Httpd {
 public:
     Httpd(uint16_t port)
         : _server(port) {
@@ -67,15 +67,15 @@ public:
         });
 
         // route - `/api/xxxxxx`
-        auto handler = new AsyncCallbackJsonWebHandler("/api", [this](AsyncWebServerRequest *request, JsonVariant &json) {
+        auto handler = new AsyncCallbackJsonWebHandler("/api", [](AsyncWebServerRequest *request, JsonVariant &json) {
             auto path = request->url();
-            debugPrint()->print("[HTTPD] Json request: "); debugPrint()->println(path);
-            debugPrint()->print("          method: "); debugPrint()->println(request->methodToString());
+            DEBUG_LOG("[HTTPD] Json request: "); DEBUG_LOG_LN(path);
+            DEBUG_LOG("          method: "); DEBUG_LOG_LN(request->methodToString());
 
             auto jsonObj = json.as<JsonObject>();
-            debugPrint()->println("            keys: ");
+            DEBUG_LOG_LN("            keys: ");
             for (auto it = jsonObj.begin(); it != jsonObj.end(); ++it) {
-                debugPrint()->print("                  "); debugPrint()->println(it->key().c_str());
+                DEBUG_LOG("                  "); DEBUG_LOG_LN(it->key().c_str());
             }
 
             // TODO implement apis
@@ -87,13 +87,13 @@ public:
         _server.addHandler(handler);
 
         // route - static contents
-        _server.on("^\\/(.*)$", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        _server.on("^\\/(.*)$", HTTP_GET, [](AsyncWebServerRequest *request) {
             auto path = request->pathArg(0);
             if (path == "") {
                 path = "index.html";
             }
 
-            debugPrint()->print("[HTTP] static: "); debugPrint()->println(path);
+            DEBUG_LOG("[HTTP] static: "); DEBUG_LOG_LN(path);
             request->send(LittleFS, "/site/" + path, mimetype(path), false);
         });
 

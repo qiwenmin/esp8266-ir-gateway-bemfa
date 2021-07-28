@@ -7,9 +7,9 @@
 #include <map>
 #include <list>
 #include <functional>
-#include "DebugPrint.h"
+#include "DebugLog.h"
 
-class BemfaMqtt : public DebugPrint {
+class BemfaMqtt {
 public:
     typedef std::function<void(const String& topic, const String& msg, AsyncMqttClient &mqttClient)> MessageListener;
 
@@ -27,27 +27,30 @@ public:
 
         // Mqtt connection events
         _mqtt_client.onConnect([this](bool sessionPresent) {
-            debugPrint()->println("[MQTT] Connected to MQTT.");
-            debugPrint()->print("[MQTT] Session present: ");
-            debugPrint()->println(sessionPresent);
+            DEBUG_LOG_LN("[MQTT] Connected to MQTT.");
+            DEBUG_LOG("[MQTT] Session present: ");
+            DEBUG_LOG_LN(sessionPresent);
 
             for (auto it = _mlsm.begin(); it != _mlsm.end(); ++it) {
-                uint16_t packetIdSub = _mqtt_client.subscribe(it->first.c_str(), 2);
+#ifdef ENABLE_DEBUG_LOG
+                uint16_t packetIdSub =
+#endif // ENABLE_DEBUG_LOG
+                    _mqtt_client.subscribe(it->first.c_str(), 2);
 
-                debugPrint()->print("[MQTT] Subscribing <");
-                debugPrint()->print(it->first);
-                debugPrint()->print("> at QoS 2, packetId: ");
-                debugPrint()->println(packetIdSub);
+                DEBUG_LOG("[MQTT] Subscribing <");
+                DEBUG_LOG(it->first);
+                DEBUG_LOG("> at QoS 2, packetId: ");
+                DEBUG_LOG_LN(packetIdSub);
             }
         });
 
         _mqtt_client.onDisconnect([this](AsyncMqttClientDisconnectReason reason) {
-            debugPrint()->println("[MQTT] Disconnected from MQTT.");
+            DEBUG_LOG_LN("[MQTT] Disconnected from MQTT.");
 
             if (WiFi.isConnected()) {
-                debugPrint()->println("[MQTT] Reconnect after 2 seconds...");
+                DEBUG_LOG_LN("[MQTT] Reconnect after 2 seconds...");
                 _reconnect_ticker.once(2, [this]() {
-                    debugPrint()->println("[MQTT] Reconnecting...");
+                    DEBUG_LOG_LN("[MQTT] Reconnecting...");
 
                     _connect();
                 });
@@ -56,20 +59,20 @@ public:
 
         // Mqtt subscribe events
         _mqtt_client.onSubscribe([this](uint16_t packetId, uint8_t qos) {
-            debugPrint()->println("[MQTT] Subscribe acknowledged:");
-            debugPrint()->print  ("         packetId: "); debugPrint()->println(packetId);
-            debugPrint()->print  ("              qos: "); debugPrint()->println(qos);
+            DEBUG_LOG_LN("[MQTT] Subscribe acknowledged:");
+            DEBUG_LOG   ("         packetId: "); DEBUG_LOG_LN(packetId);
+            DEBUG_LOG   ("              qos: "); DEBUG_LOG_LN(qos);
         });
 
         _mqtt_client.onUnsubscribe([this](uint16_t packetId) {
-            debugPrint()->println("[MQTT] Unsubscribe acknowledged:");
-            debugPrint()->print  ("         packetId: "); debugPrint()->println(packetId);
+            DEBUG_LOG_LN("[MQTT] Unsubscribe acknowledged:");
+            DEBUG_LOG   ("         packetId: "); DEBUG_LOG_LN(packetId);
         });
 
         // Mqtt pub/msg events
         _mqtt_client.onPublish([this](uint16_t packetId) {
-            debugPrint()->println("[MQTT] Publish acknowledged:");
-            debugPrint()->print  ("         packetId: "); debugPrint()->println(packetId);
+            DEBUG_LOG_LN("[MQTT] Publish acknowledged:");
+            DEBUG_LOG   ("         packetId: "); DEBUG_LOG_LN(packetId);
         });
 
         _mqtt_client.onMessage([this](char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
@@ -78,15 +81,15 @@ public:
                 msg += payload[i];
             }
 
-            debugPrint()->println("[MQTT] Message received:");
-            debugPrint()->print  ("          topic: "); debugPrint()->println(topic);
-            debugPrint()->print  ("            qos: "); debugPrint()->println(properties.qos);
-            debugPrint()->print  ("            dup: "); debugPrint()->println(properties.dup);
-            debugPrint()->print  ("         retain: "); debugPrint()->println(properties.retain);
-            debugPrint()->print  ("            len: "); debugPrint()->println(len);
-            debugPrint()->print  ("          index: "); debugPrint()->println(index);
-            debugPrint()->print  ("          total: "); debugPrint()->println(total);
-            debugPrint()->print  ("        payload: "); debugPrint()->println(msg);
+            DEBUG_LOG_LN("[MQTT] Message received:");
+            DEBUG_LOG   ("          topic: "); DEBUG_LOG_LN(topic);
+            DEBUG_LOG   ("            qos: "); DEBUG_LOG_LN(properties.qos);
+            DEBUG_LOG   ("            dup: "); DEBUG_LOG_LN(properties.dup);
+            DEBUG_LOG   ("         retain: "); DEBUG_LOG_LN(properties.retain);
+            DEBUG_LOG   ("            len: "); DEBUG_LOG_LN(len);
+            DEBUG_LOG   ("          index: "); DEBUG_LOG_LN(index);
+            DEBUG_LOG   ("          total: "); DEBUG_LOG_LN(total);
+            DEBUG_LOG   ("        payload: "); DEBUG_LOG_LN(msg);
 
             if (_mlsm.count(topic) == 1) {
                 auto lst = _mlsm.at(topic);
@@ -98,13 +101,13 @@ public:
 
         // WiFi events
         _got_ip_handler = WiFi.onStationModeGotIP([this](const WiFiEventStationModeGotIP &) {
-            debugPrint()->println("[MQTT] Connected to WiFi.");
+            DEBUG_LOG_LN("[MQTT] Connected to WiFi.");
 
             _connect();
         });
 
         _disconnected_handler = WiFi.onStationModeDisconnected([this](const WiFiEventStationModeDisconnected &) {
-            debugPrint()->println("[MQTT] Disconnected from WiFi.");
+            DEBUG_LOG_LN("[MQTT] Disconnected from WiFi.");
 
             _reconnect_ticker.detach(); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
         });
@@ -115,11 +118,11 @@ public:
 
 private:
     void _connect() {
-        debugPrint()->print("[MQTT] Connecting to MQTT server: ");
-        debugPrint()->print(_host);
-        debugPrint()->print(":");
-        debugPrint()->print(_port);
-        debugPrint()->println();
+        DEBUG_LOG("[MQTT] Connecting to MQTT server: ");
+        DEBUG_LOG(_host);
+        DEBUG_LOG(":");
+        DEBUG_LOG(_port);
+        DEBUG_LOG_LN();
 
         _mqtt_client.connect();
     };
