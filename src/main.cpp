@@ -2,6 +2,7 @@
 
 #include "ESP8266Boot.h"
 #include "bemfa.h"
+#include "httpd.h"
 
 #include "hw.h"
 #include "bemfa.inc"
@@ -11,6 +12,8 @@
 ESP8266Boot boot;
 
 BemfaMqtt bemfaMqtt(bemfa_mqtt_server, bemfa_mqtt_port, bemfa_mqtt_client_id);
+
+Httpd httpd(80);
 
 static String hostname;
 
@@ -28,6 +31,9 @@ void setup() {
     register_panasonic_light_01_handler(bemfaMqtt, hostname, boot.getLed());
 
     bemfaMqtt.begin();
+
+    // Init httpd
+    httpd.begin();
 
     // Init boot
     boot.setLed(LED_PIN, LOW);
