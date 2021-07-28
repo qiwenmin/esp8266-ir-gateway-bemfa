@@ -5,10 +5,13 @@
 #include <LittleFS.h>
 #include <AsyncJson.h>
 #include <ArduinoJson.h>
+#include <ESP8266mDNS.h>
 
 #include "DebugLog.h"
 
 #include "version.h"
+
+extern BemfaMqtt bemfaMqtt;
 
 static const char *mimetype(const String &filename) {
     auto fn = filename;
@@ -52,7 +55,7 @@ public:
         // Init web server
 
         // route - /version
-        _server.on("/version", HTTP_GET, [](AsyncWebServerRequest *request) {
+        _server.on("^\\/version$", HTTP_GET, [](AsyncWebServerRequest *request) {
             auto response = request->beginResponseStream("application/json");
             DynamicJsonDocument v(256);
 
@@ -66,10 +69,23 @@ public:
             request->send(response);
         });
 
-        // route - `/api/xxxxxx`
+        // route - GET `/api/xxxxxx`
+        _server.on("^\\/api\\/(.*)$", HTTP_GET, [this](AsyncWebServerRequest *request) {
+            auto path = request->pathArg(0);
+
+            DEBUG_LOG("[HTTP] GET /api/"); DEBUG_LOG_LN(path);
+
+            if (path == "status") {
+                _apiStatusGet(request);
+            } else {
+                request->send(404, "text/plain", "Not Found");
+            }
+        });
+
+        // route - POST/PUT `/api/xxxxxx`
         auto handler = new AsyncCallbackJsonWebHandler("/api", [](AsyncWebServerRequest *request, JsonVariant &json) {
             auto path = request->url();
-            DEBUG_LOG("[HTTPD] Json request: "); DEBUG_LOG_LN(path);
+            DEBUG_LOG("[HTTP] Json request: "); DEBUG_LOG_LN(path);
             DEBUG_LOG("          method: "); DEBUG_LOG_LN(request->methodToString());
 
             auto jsonObj = json.as<JsonObject>();
@@ -106,4 +122,31 @@ public:
     };
 private:
     AsyncWebServer _server;
+
+    void _apiStatusGet(AsyncWebServerRequest *request) {
+        auto response = request->beginResponseStream("application/json");
+        DynamicJsonDocument v(384);
+
+        v["wifi"]["ssid"] = WiFi.SSID();
+        v["wifi"]["isConnected"] = WiFi.isConnected();
+        v["wifi"]["hostname"] = WiFi.getHostname();
+        v["wifi"]["localIp"] = WiFi.localIP().toString();
+
+        v["mdns"]["isRunning"] = MDNS.isRunning();
+
+        v["mqtt"]["isConnected"] = bemfaMqtt.getMqttClient().connected();
+        v["mqtt"]["clientId"] = bemfaMqtt.getMqttClient().getClientId();
+
+        uint32_t free;
+        uint16_t maxFreeBlockSize;
+        uint8_t fragmentation;
+        ESP.getHeapStats(&free, &maxFreeBlockSize, &fragmentation);
+
+        v["heap"]["free"] = free;
+        v["heap"]["maxFreeBlockSize"] = maxFreeBlockSize;
+        v["heap"]["fragmentation"] = fragmentation;
+
+        serializeJsonPretty(v, *response);
+        request->send(response);
+    }
 };

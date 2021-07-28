@@ -116,6 +116,9 @@ public:
     void loop() {
     };
 
+    AsyncMqttClient &getMqttClient() {
+        return _mqtt_client;
+    };
 private:
     void _connect() {
         DEBUG_LOG("[MQTT] Connecting to MQTT server: ");
