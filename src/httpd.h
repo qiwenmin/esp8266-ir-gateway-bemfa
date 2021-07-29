@@ -15,35 +15,6 @@
 
 extern BemfaMqtt bemfaMqtt;
 
-static const char *mimetype(const String &filename) {
-    auto fn = filename;
-    fn.toLowerCase();
-
-    if (fn.endsWith(".htm") || fn.endsWith(".html")) {
-        return "text/html";
-    }
-    if (fn.endsWith(".css")) {
-        return "text/css";
-    }
-    if (fn.endsWith(".js")) {
-        return "application/javascript";
-    }
-    if (fn.endsWith(".json")) {
-        return "application/json";
-    }
-    if (fn.endsWith(".png")) {
-        return "image/png";
-    }
-    if (fn.endsWith(".jpg") || fn.endsWith(".jpeg")) {
-        return "image/jpeg";
-    }
-    if (fn.endsWith(".gif")) {
-        return "image/gif";
-    }
-
-    return "text/plain";
-}
-
 class Httpd {
 public:
     Httpd(uint16_t port)
@@ -116,20 +87,7 @@ public:
         _server.addHandler(handler);
 
         // route - static contents
-        _server.on("^\\/(.*)$", HTTP_GET, [](AsyncWebServerRequest *request) {
-            auto path = request->pathArg(0);
-            if (path == "") {
-                path = "index.html";
-            }
-
-            DEBUG_LOG("[HTTP] static: "); DEBUG_LOG_LN(path);
-            auto fpath = "/site/" + path;
-            if (LittleFS.exists(fpath)) {
-                request->send(LittleFS, fpath, mimetype(path), false);
-            } else {
-                request->send(404, "text/plain", "Not Found");
-            }
-        });
+        _server.serveStatic("/", LittleFS, "/site/").setDefaultFile("index.html");
 
         // route - not found
         _server.onNotFound([](AsyncWebServerRequest *request) {
