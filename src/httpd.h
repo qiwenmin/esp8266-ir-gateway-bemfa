@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include <ESPAsyncWebServer.h>
 #include <FS.h>
 #include <LittleFS.h>
@@ -75,10 +77,21 @@ public:
 
             DEBUG_LOG("[HTTP] GET /api/"); DEBUG_LOG_LN(path);
 
+            auto v = std::unique_ptr<DynamicJsonDocument>(nullptr);
+
             if (path == "status") {
-                _apiStatusGet(request);
+                v = _apiStatusGet();
             } else {
                 request->send(404, "text/plain", "Not Found");
+                return;
+            }
+
+            if (v) {
+                auto response = request->beginResponseStream("application/json");
+                serializeJsonPretty(*v, *response);
+                request->send(response);
+            } else {
+                request->send(500, "text/plain", "Internal Server Error");
             }
         });
 
@@ -128,30 +141,34 @@ public:
 private:
     AsyncWebServer _server;
 
-    void _apiStatusGet(AsyncWebServerRequest *request) {
-        auto response = request->beginResponseStream("application/json");
-        DynamicJsonDocument v(384);
+    std::unique_ptr<DynamicJsonDocument> _apiStatusGet() {
+        auto v = std::make_unique<DynamicJsonDocument>(512);
 
-        v["wifi"]["ssid"] = WiFi.SSID();
-        v["wifi"]["isConnected"] = WiFi.isConnected();
-        v["wifi"]["hostname"] = WiFi.getHostname();
-        v["wifi"]["localIp"] = WiFi.localIP().toString();
+        (*v)["wifi"]["ssid"] = WiFi.SSID();
+        (*v)["wifi"]["isConnected"] = WiFi.isConnected();
+        (*v)["wifi"]["hostname"] = WiFi.getHostname();
+        (*v)["wifi"]["localIp"] = WiFi.localIP().toString();
+        (*v)["wifi"]["mac"] = WiFi.macAddress();
 
-        v["mdns"]["isRunning"] = MDNS.isRunning();
+        (*v)["mdns"]["isRunning"] = MDNS.isRunning();
 
-        v["mqtt"]["isConnected"] = bemfaMqtt.getMqttClient().connected();
-        v["mqtt"]["clientId"] = bemfaMqtt.getMqttClient().getClientId();
+        (*v)["mqtt"]["isConnected"] = bemfaMqtt.getMqttClient().connected();
+        (*v)["mqtt"]["clientId"] = bemfaMqtt.getMqttClient().getClientId();
 
-        uint32_t free;
-        uint16_t maxFreeBlockSize;
-        uint8_t fragmentation;
-        ESP.getHeapStats(&free, &maxFreeBlockSize, &fragmentation);
+        uint32_t heapFree;
+        uint16_t heapMaxFreeBlockSize;
+        uint8_t heapFragmentation;
+        ESP.getHeapStats(&heapFree, &heapMaxFreeBlockSize, &heapFragmentation);
 
-        v["heap"]["free"] = free;
-        v["heap"]["maxFreeBlockSize"] = maxFreeBlockSize;
-        v["heap"]["fragmentation"] = fragmentation;
+        (*v)["ESP"]["heapFree"] = heapFree;
+        (*v)["ESP"]["heapMaxFreeBlockSize"] = heapMaxFreeBlockSize;
+        (*v)["ESP"]["heapFragmentation"] = heapFragmentation;
 
-        serializeJsonPretty(v, *response);
-        request->send(response);
+        (*v)["ESP"]["cpuFreqMHz"] = ESP.getCpuFreqMHz();
+        (*v)["ESP"]["cycleCount"] = ESP.getCycleCount();
+        (*v)["ESP"]["chipId"] = ESP.getChipId();
+        (*v)["ESP"]["vcc"] = ESP.getVcc();
+
+        return v;
     }
 };
