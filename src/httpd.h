@@ -118,14 +118,16 @@ private:
         uint8_t heapFragmentation;
         ESP.getHeapStats(&heapFree, &heapMaxFreeBlockSize, &heapFragmentation);
 
-        (*v)["ESP"]["heapFree"] = heapFree;
-        (*v)["ESP"]["heapMaxFreeBlockSize"] = heapMaxFreeBlockSize;
-        (*v)["ESP"]["heapFragmentation"] = heapFragmentation;
+        (*v)["device"]["heapFree"] = heapFree;
+        (*v)["device"]["heapMaxFreeBlockSize"] = heapMaxFreeBlockSize;
+        (*v)["device"]["heapFragmentation"] = heapFragmentation;
 
-        (*v)["ESP"]["cpuFreqMHz"] = ESP.getCpuFreqMHz();
-        (*v)["ESP"]["cycleCount"] = ESP.getCycleCount();
-        (*v)["ESP"]["chipId"] = ESP.getChipId();
-        (*v)["ESP"]["vcc"] = ESP.getVcc();
+        (*v)["device"]["cpuFreqMHz"] = ESP.getCpuFreqMHz();
+        (*v)["device"]["cycleCount"] = ESP.getCycleCount();
+        (*v)["device"]["chipId"] = ESP.getChipId();
+        (*v)["device"]["vcc"] = ESP.getVcc();
+
+        (*v)["device"]["uptimeInMs"] = millis();
 
         return v;
     }
