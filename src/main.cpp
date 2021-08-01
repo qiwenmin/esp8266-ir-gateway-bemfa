@@ -34,7 +34,7 @@ void setup() {
     bemfaMqtt.begin();
 
     // Init httpd
-    httpd.begin();
+    httpd.begin(hostname);
 
     // Init boot
     boot.setLed(LED_PIN, LOW);

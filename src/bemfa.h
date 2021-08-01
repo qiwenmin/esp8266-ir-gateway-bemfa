@@ -21,6 +21,16 @@ public:
         _mlsm[topic].push_back(listener);
     };
 
+    std::list<String> &getTopics(std::list<String> &topicsToReturn) {
+        topicsToReturn.clear();
+
+        for (auto it = _mlsm.begin(); it != _mlsm.end(); ++it) {
+            topicsToReturn.push_back(it->first);
+        }
+
+        return topicsToReturn;
+    };
+
     void begin() {
         _mqtt_client.setServer(_host.c_str(), _port);
         _mqtt_client.setClientId(_client_id.c_str());
