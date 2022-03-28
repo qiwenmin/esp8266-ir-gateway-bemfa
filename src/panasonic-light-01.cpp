@@ -98,7 +98,7 @@ void register_panasonic_light_01_handler(BemfaMqtt &bemfaMqtt, const String& top
         }
 
         if (changed) {
-            mqttClient.publish(topic.c_str(), 2, true, msg.c_str(), msg.length());
+            mqttClient.publish(topic.c_str(), 1, true, msg.c_str(), msg.length());
         }
     });
 }

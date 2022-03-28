@@ -35,7 +35,7 @@ public:
 #ifdef ENABLE_DEBUG_LOG
                 uint16_t packetIdSub =
 #endif // ENABLE_DEBUG_LOG
-                    _mqtt_client.subscribe(it->first.c_str(), 2);
+                    _mqtt_client.subscribe(it->first.c_str(), 1);
 
                 DEBUG_LOG("[MQTT] Subscribing <");
                 DEBUG_LOG(it->first);
