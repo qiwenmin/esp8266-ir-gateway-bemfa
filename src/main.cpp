@@ -37,7 +37,7 @@ void setup() {
     httpd.begin();
 
     // Init boot
-    boot.setLed(LED_PIN, LOW);
+    boot.setLed(LED_PIN, HIGH);
     boot.setButton(BTN_PIN);
     boot.setHostname(hostname);
     boot.setOTAPassword(hostname);
